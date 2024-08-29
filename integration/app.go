@@ -164,6 +164,35 @@ func (a App) Serve(msg string, options ...ExecOption) (ok bool) {
 	)
 }
 
+func (a App) TestnetInPlace(msg string, options ...ExecOption) (ok bool) {
+	inPlaceCommand := []string{
+		"testnet",
+		"in-place",
+		"-v",
+		"--quit-on-fail",
+	}
+
+	if a.homePath != "" {
+		inPlaceCommand = append(inPlaceCommand, "--home", a.homePath)
+	}
+	if a.configPath != "" {
+		inPlaceCommand = append(inPlaceCommand, "--config", a.configPath)
+	}
+	a.env.t.Cleanup(func() {
+		// Serve install the app binary in GOBIN, let's clean that.
+		appBinary := path.Join(goenv.Bin(), a.Binary())
+		os.Remove(appBinary)
+	})
+
+	return a.env.Exec(msg,
+		step.NewSteps(step.New(
+			step.Exec(IgniteApp, inPlaceCommand...),
+			step.Workdir(a.path),
+		)),
+		options...,
+	)
+}
+
 // Simulate runs the simulation test for the app.
 func (a App) Simulate(numBlocks, blockSize int) {
 	a.env.Exec("running the simulation tests",
